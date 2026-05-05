@@ -11,7 +11,7 @@ import tempfile
 import threading
 from functools import lru_cache
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
+DATA_DIR = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'data')
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), '..', 'config')
 
 _FILE_LOCKS: dict[str, threading.Lock] = {}

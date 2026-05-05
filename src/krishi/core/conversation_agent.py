@@ -19,10 +19,10 @@ from typing import Any, Dict, Optional
 import requests
 from dotenv import load_dotenv
 
-from .utils import load_json, save_json, get_vendor_by_id, get_consumer_by_id
-from .listing_agent import extract_product
-from .discovery_agent import search_products
-from .udhar_agent import create_udhar, pay_udhar, get_audit_log
+from ..utils.utils import load_json, save_json, get_vendor_by_id, get_consumer_by_id
+from ..services.listing_agent import extract_product
+from ..services.discovery_agent import search_products
+from ..services.udhar_agent import create_udhar, pay_udhar, get_audit_log
 
 # Load environment variables (for Ollama configuration)
 load_dotenv()
@@ -272,7 +272,7 @@ def _parse_option_choice(text: str) -> Optional[int]:
 
 
 def _vendor_register_shop(user_id: int, voice_text: str, state: Dict[str, Any]) -> Dict[str, Any]:
-    from .session_agent import update_user_profile
+    from ..services.session_agent import update_user_profile
 
     stage = state.get("stage")
 
@@ -692,7 +692,7 @@ def _vendor_mark_paid(user_id: int, voice_text: str, state: Dict[str, Any]) -> D
 
 
 def _consumer_register(user_id: int, voice_text: str, state: Dict[str, Any]) -> Dict[str, Any]:
-    from .session_agent import update_user_profile
+    from ..services.session_agent import update_user_profile
 
     stage = state.get("stage")
 

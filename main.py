@@ -12,7 +12,7 @@ import os
 import uvicorn
 import json
 
-from agents.speech_utils import (
+from src.krishi.utils.speech_utils import (
     transcribe_audio_to_text,
     synthesize_text_to_speech_hi,
     encode_audio_base64,
@@ -20,7 +20,7 @@ from agents.speech_utils import (
     has_tts_backend,
 )
 
-from agents.session_agent import (
+from src.krishi.services.session_agent import (
     register_user,
     login_user,
     validate_session,
@@ -28,6 +28,13 @@ from agents.session_agent import (
     update_user_profile,
     cleanup_expired_sessions,
 )
+
+from src.krishi.services.listing_agent import extract_product
+from src.krishi.services.discovery_agent import search_products
+from src.krishi.services.udhar_agent import create_udhar, pay_udhar, get_audit_log
+from src.krishi.services.fallback_agent import parse_sms, get_ussd_tree
+from src.krishi.utils.utils import load_json, save_json
+from src.krishi.core.conversation_agent import handle_conversation
 
 # ──────────────────────────────────────────────
 # App setup

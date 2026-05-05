@@ -6,66 +6,127 @@
 
 ---
 
-## 📁 Project Structure
+## 📁 Project Structure (Reorganized)
 
-Top-level layout (important files only):
-
-```bash
+```
 krishi-sarthi/
-├─ main.py                 # FastAPI backend entrypoint (Krishi Saarthi API)
-├─ requirements.txt        # Python backend dependencies
-├─ agents/                 # Domain "agents" used by the conversation engine
-│  ├─ conversation_agent.py   # Central voice-first assistant logic
-│  ├─ listing_agent.py        # Vendor product extraction (Ollama + regex)
-│  ├─ discovery_agent.py      # Consumer search & ranking (Ollama + rules)
-│  ├─ udhar_agent.py          # Udhar (credit) ledger + audit trail
-│  ├─ fallback_agent.py       # SMS / USSD style fallback
-│  ├─ speech_utils.py         # STT (Whisper) + TTS (gTTS Hindi) helpers
-│  └─ utils.py                # JSON I/O, helpers, distance, freshness labels
-├─ data/                   # JSON "database" (created/updated at runtime)
-│  ├─ vendors.json
-│  ├─ consumers.json
-│  ├─ inventory.json
-│  ├─ orders.json
-│  ├─ udhar_ledger.json
-│  └─ pending_udhar.json
-├─ frontend/               # Vite-based web app (npm run dev)
-│  ├─ index.html           # Landing + assistant layout
-│  ├─ style.css            # Green, mobile-style theme
-│  ├─ script.js            # Mic handling, API calls, UI updates
-│  ├─ package.json         # Frontend scripts & devDeps (Vite)
-│  ├─ vite.config.mjs      # Dev server + /api proxy → FastAPI
-│  └─ src/
-│     └─ main.js           # Vite entry importing style.css + script.js
-└─ .env / .env.example     # Backend configuration (Ollama, etc.)
+├── main.py                    # FastAPI application entrypoint
+├── requirements.txt           # Python dependencies
+├── pyproject.toml            # Python project configuration
+├── .env / .env.example        # Environment configuration
+├── src/                      # Source code package
+│   └── krishi/
+│       ├── __init__.py
+│       ├── core/             # Core business logic
+│       │   ├── __init__.py
+│       │   └── conversation_agent.py
+│       ├── services/         # Domain services
+│       │   ├── __init__.py
+│       │   ├── listing_agent.py
+│       │   ├── discovery_agent.py
+│       │   ├── udhar_agent.py
+│       │   ├── fallback_agent.py
+│       │   └── session_agent.py
+│       └── utils/            # Shared utilities
+│           ├── __init__.py
+│           ├── speech_utils.py
+│           └── utils.py
+├── frontend/                 # React/Vue-style frontend
+│   ├── package.json
+│   ├── vite.config.mjs
+│   ├── index.html
+│   ├── public/               # Static assets
+│   └── src/
+│       ├── main.js           # Entry point
+│       ├── components/       # UI components
+│       ├── utils/            # Frontend utilities
+│       │   └── script.js     # Main app logic
+│       └── assets/           # Styles, images
+│           └── style.css
+├── data/                     # Runtime data storage
+├── tests/                    # Test suite
+├── scripts/                  # Development scripts
+│   ├── setup.py             # Environment setup
+│   └── dev.py               # Development tasks
+└── docs/                    # Documentation
+    └── README.md
 ```
 
 ---
 
-## 🚀 How to Run (Backend + Frontend)
+## 🚀 Quick Start
 
-### 1. Clone & enter project
-
+### Automated Setup
 ```bash
 git clone <repo-url>
 cd krishi-sarthi
+
+# Run automated setup (creates venv, installs deps)
+python scripts/dev.py setup
 ```
 
-### 2. Backend setup (FastAPI)
-
+### Manual Setup
 ```bash
+# Create virtual environment
 python -m venv venv
 venv\Scripts\activate    # Windows
-# source venv/bin/activate  # macOS / Linux
 
+# Install dependencies
 pip install -r requirements.txt
 
-# Environment (Ollama, etc.)
-copy .env.example .env    # Windows
-# cp .env.example .env      # macOS / Linux
-# Then edit .env to point OLLAMA_HOST / OLLAMA_MODEL if needed
+# Setup frontend
+cd frontend
+npm install
+cd ..
+```
 
-# Optional audio dependencies
+### Configuration
+```bash
+# Copy environment template
+copy .env.example .env
+
+# Edit .env for your setup (Ollama host, etc.)
+```
+
+### Running the Application
+```bash
+# Backend (terminal 1)
+python scripts/dev.py backend
+
+# Frontend (terminal 2)
+python scripts/dev.py frontend
+```
+
+---
+
+## 🛠️ Development Workflow
+
+### Available Commands
+```bash
+# Setup environment
+python scripts/dev.py setup
+
+# Start services
+python scripts/dev.py backend   # FastAPI server
+python scripts/dev.py frontend  # Vite dev server
+
+# Testing & Quality
+python scripts/dev.py test      # Run test suite
+python scripts/dev.py lint      # Code linting
+
+# Maintenance
+python scripts/dev.py clean     # Clean data files
+```
+
+### Project Structure Details
+- **`src/krishi/`**: Main Python package
+  - `core/`: Conversation engine and business logic
+  - `services/`: Domain-specific services (listing, payments, auth)
+  - `utils/`: Shared utilities and helpers
+- **`frontend/`**: Modern frontend with component structure
+- **`tests/`**: Comprehensive test suite
+- **`scripts/`**: Development and deployment automation
+- **`docs/`**: Detailed documentation
 # Install gTTS for Hindi TTS and Whisper for local STT if you want full voice support.
 # See requirements.txt comments for the optional package names.
 
