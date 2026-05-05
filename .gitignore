@@ -1,0 +1,26 @@
+.env
+# Keep .env.example tracked as a template for environment setup
+!.env.example
+
+# Python runtime and virtual environment
+venv/
+ENV/
+.envrc
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Node/Vite dependencies and build artifacts
+frontend/node_modules/
+frontend/dist/
+
+# Runtime data files
+data/
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
