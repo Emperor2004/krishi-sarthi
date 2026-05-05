@@ -7,6 +7,7 @@ let recordedChunks = [];
 let currentState = {}; // conversation state from backend
 let currentRole = "consumer"; // default role
 let lastAudioUrl = null;
+let sessionToken = null; // authentication token
 
 const recordBtn = document.getElementById("record-btn");
 const stopBtn = document.getElementById("stop-btn");
@@ -19,8 +20,109 @@ const convWindow = document.getElementById("conversation-window");
 const roleToggle = document.getElementById("role-toggle");
 const landingScreen = document.getElementById("landing-screen");
 const assistantScreen = document.getElementById("assistant-screen");
+const authScreen = document.getElementById("auth-screen");
+const loginForm = document.getElementById("login-form");
+const registerForm = document.getElementById("register-form");
 const startVendorBtn = document.getElementById("start-vendor");
 const startConsumerBtn = document.getElementById("start-consumer");
+
+// Authentication elements
+const loginFormElement = document.getElementById("login-form-element");
+const registerFormElement = document.getElementById("register-form-element");
+const showRegisterLink = document.getElementById("show-register");
+const showLoginLink = document.getElementById("show-login");
+
+// Check if user is already logged in
+function checkAuth() {
+	const token = localStorage.getItem("krishi_session_token");
+	if (token) {
+		sessionToken = token;
+		showLandingScreen();
+	} else {
+		showAuthScreen();
+	}
+}
+
+// Show authentication screen
+function showAuthScreen() {
+	authScreen.classList.remove("hidden");
+	landingScreen.classList.add("hidden");
+	assistantScreen.classList.add("hidden");
+}
+
+// Show landing screen (role selection)
+function showLandingScreen() {
+	authScreen.classList.add("hidden");
+	landingScreen.classList.remove("hidden");
+	assistantScreen.classList.add("hidden");
+}
+
+// Authentication functions
+async function login(phone, password) {
+	try {
+		const res = await fetch("/api/auth/login", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ phone, password }),
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(error.error || "Login failed");
+		}
+
+		const data = await res.json();
+		sessionToken = data.session_token;
+		localStorage.setItem("krishi_session_token", sessionToken);
+		showLandingScreen();
+		return data;
+	} catch (err) {
+		alert("लॉगिन में दिक्कत: " + err.message);
+		throw err;
+	}
+}
+
+async function register(phone, name, role, password, address) {
+	try {
+		const res = await fetch("/api/auth/register", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ phone, name, role, password, address }),
+		});
+
+		if (!res.ok) {
+			const error = await res.json();
+			throw new Error(error.error || "Registration failed");
+		}
+
+		const data = await res.json();
+		sessionToken = data.session_token;
+		localStorage.setItem("krishi_session_token", sessionToken);
+		showLandingScreen();
+		return data;
+	} catch (err) {
+		alert("रजिस्ट्रेशन में दिक्कत: " + err.message);
+		throw err;
+	}
+}
+
+async function logout() {
+	try {
+		if (sessionToken) {
+			await fetch("/api/auth/logout", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ session_token: sessionToken }),
+			});
+		}
+	} catch (err) {
+		console.error("Logout error:", err);
+	}
+
+	sessionToken = null;
+	localStorage.removeItem("krishi_session_token");
+	showAuthScreen();
+}
 
 function setStatus(mode, text) {
 	statusDot.classList.remove("idle", "recording", "thinking");
@@ -104,10 +206,8 @@ function stopRecording() {
 async function sendAudioToBackend(blob) {
 	try {
 		const form = new FormData();
-		const userId = 1; // simple demo; replace with real user id
 
-		form.append("user_id", String(userId));
-		form.append("role", currentRole);
+		form.append("session_token", sessionToken);
 		form.append("state", JSON.stringify(currentState || {}));
 		form.append("language", "hi");
 		form.append("audio_file", new File([blob], "voice.webm", { type: "audio/webm" }));
@@ -118,7 +218,14 @@ async function sendAudioToBackend(blob) {
 		});
 
 		if (!res.ok) {
-			throw new Error("Server error " + res.status);
+			const errorText = await res.text();
+			if (res.status === 401) {
+				// Session expired
+				alert("सेशन खत्म हो गया। कृपया फिर से लॉगिन करें।");
+				logout();
+				return;
+			}
+			throw new Error("Server error " + res.status + ": " + errorText);
 		}
 
 		const data = await res.json();
@@ -210,6 +317,59 @@ replayBtn.addEventListener("click", () => {
 	if (!lastAudioUrl) return;
 	const audio = new Audio(lastAudioUrl);
 	audio.play();
+});
+
+// Authentication event listeners
+if (loginFormElement) {
+	loginFormElement.addEventListener("submit", async (e) => {
+		e.preventDefault();
+		const phone = document.getElementById("login-phone").value;
+		const password = document.getElementById("login-password").value;
+
+		try {
+			await login(phone, password);
+		} catch (err) {
+			// Error already shown in login function
+		}
+	});
+}
+
+if (registerFormElement) {
+	registerFormElement.addEventListener("submit", async (e) => {
+		e.preventDefault();
+		const phone = document.getElementById("register-phone").value;
+		const name = document.getElementById("register-name").value;
+		const role = document.getElementById("register-role").value;
+		const password = document.getElementById("register-password").value;
+		const address = document.getElementById("register-address").value;
+
+		try {
+			await register(phone, name, role, password, address);
+		} catch (err) {
+			// Error already shown in register function
+		}
+	});
+}
+
+if (showRegisterLink) {
+	showRegisterLink.addEventListener("click", (e) => {
+		e.preventDefault();
+		loginForm.classList.add("hidden");
+		registerForm.classList.remove("hidden");
+	});
+}
+
+if (showLoginLink) {
+	showLoginLink.addEventListener("click", (e) => {
+		e.preventDefault();
+		registerForm.classList.add("hidden");
+		loginForm.classList.remove("hidden");
+	});
+}
+
+// Initialize app
+document.addEventListener("DOMContentLoaded", () => {
+	checkAuth();
 });
 
 // Initial status

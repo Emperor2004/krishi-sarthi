@@ -64,6 +64,15 @@ pip install -r requirements.txt
 copy .env.example .env    # Windows
 # cp .env.example .env      # macOS / Linux
 # Then edit .env to point OLLAMA_HOST / OLLAMA_MODEL if needed
+
+# Optional audio dependencies
+# Install gTTS for Hindi TTS and Whisper for local STT if you want full voice support.
+# See requirements.txt comments for the optional package names.
+
+# Notes:
+# - The backend can still start without these packages.
+# - /api/voice remains available for text-only conversational access.
+# - /api/voice-audio will fallback to text-only mode when STT or TTS is unavailable.
 ```
 
 ### 3. Start backend API
@@ -74,6 +83,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 - API base: http://localhost:8000  
 - Docs: http://localhost:8000/docs
+- Health: http://localhost:8000/api/health
 
 ### 4. Frontend setup (Vite web app)
 
@@ -123,6 +133,65 @@ FastAPI Backend (main.py)
     │
     └─ JSON data in /data (vendors, consumers, inventory, orders, udhar_ledger, pending_udhar)
 ```
+
+---
+
+## 🔐 Authentication & User Management
+
+Krishi Saarthi uses session-based authentication with secure tokens. Users must register and login before accessing voice features.
+
+### Authentication Endpoints
+
+```bash
+POST /api/auth/register
+# Register new user (vendor/consumer)
+{
+  "phone": "9876543210",
+  "name": "Rajesh Kumar",
+  "role": "vendor",  # or "consumer"
+  "password": "secure123",
+  "address": "Village Name"  # optional
+}
+
+POST /api/auth/login
+# Login and get session token
+{
+  "phone": "9876543210",
+  "password": "secure123"
+}
+# Returns: { "user_id": 1, "role": "vendor", "session_token": "abc123..." }
+
+POST /api/auth/logout
+# Logout (invalidate session)
+{ "session_token": "abc123..." }
+
+GET /api/auth/validate?session_token=abc123
+# Validate session and get user info
+```
+
+### Voice Conversation Flow
+
+All voice endpoints now require a valid `session_token`:
+
+```bash
+POST /api/voice
+{
+  "session_token": "abc123...",
+  "voice_text": "naya product add karo",
+  "state": { "role": "vendor", "stage": "vendor_home" },
+  "language": "hi"
+}
+
+POST /api/voice-audio
+# Form data: session_token, state (JSON), language, audio_file
+```
+
+### Session Management
+
+- **Session Timeout**: 24 hours of inactivity
+- **Security**: Tokens are cryptographically secure random strings
+- **Cleanup**: Expired sessions are automatically cleaned up
+- **Multi-user**: Each user gets their own isolated data and context
 
 ---
 
@@ -184,7 +253,7 @@ This is how a typical session flows end‑to‑end.
 | Feature | Implementation |
 |---------|---------------|
 | Voice Input | Web Speech API, multi-language (en-IN) |
-| LLM Integration | Google Gemini Flash via REST API |
+| LLM Integration | Ollama local models (phi3, etc.) |
 | Fallback | Regex parser runs if API fails/unavailable |
 | Audit Trail | Immutable append-only JSON log per transaction |
 | Offline Mode | SMS command parser + USSD tree simulation |

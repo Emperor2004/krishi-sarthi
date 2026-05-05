@@ -128,37 +128,92 @@ Return ONLY a JSON object like:
 def _detect_intent_keyword(role: str, voice_text: str) -> str:
     """Fallback keyword-based intent detection.
 
-    Very lightweight and biased towards Hindi phrases.
+    Enhanced with better Hindi phrase coverage and conflict resolution.
     """
-    text = voice_text.lower()
+    text = voice_text.lower().strip()
     role = role.lower()
 
+    # Normalize common variations
+    text = text.replace("karza", "udhar")  # karza is a common misspelling/variant
+    text = text.replace("karze", "udhar")
+    text = text.replace("karzi", "udhar")
+
     if role == "vendor":
-        if any(k in text for k in ["register", "registration", "dukaan", "shop"]):
+        # Register shop - highest priority for new vendors
+        if any(k in text for k in [
+            "register", "registration", "dukaan", "shop", "dukana", "dukan",
+            "naya dukaan", "dukaan kholna", "shop kholna", "business start"
+        ]):
             return "register_shop"
-        if any(k in text for k in ["product add", "naya product", "maal add", "bechna", "listing"]):
+
+        # Add product - specific product-related terms
+        if any(k in text for k in [
+            "product add", "naya product", "maal add", "bechna", "listing",
+            "add karo", "jodna", "jodo", "add karna", "product dalna",
+            "samaan add", "item add", "stock add", "inventory add"
+        ]):
             return "add_product"
-        # More specific "udhar dena" style phrases first
-        if any(k in text for k in ["udhar dena", "karza dena", "credit dena"]):
+
+        # Create udhar - specific credit creation terms
+        if any(k in text for k in [
+            "udhar dena", "udhar do", "udhar karo", "credit dena", "credit do",
+            "karza dena", "karza do", "baki dena", "baki do",
+            "udhar par dena", "credit par dena"
+        ]):
             return "create_udhar"
-        if any(k in text for k in ["order", "orders", "booking", "order dekh", "order dekho"]):
-            return "view_orders"
-        if any(k in text for k in ["udhar", "baki", "karza"]):
-            return "view_udhar"
-        if any(k in text for k in ["mark paid", "paid ho gaya", "chuka diya", "clear udhar"]):
+
+        # Mark paid - payment confirmation terms
+        if any(k in text for k in [
+            "mark paid", "paid ho gaya", "chuka diya", "clear udhar",
+            "udhar clear", "paid kar diya", "bhugtaan ho gaya",
+            "udhar chuka", "karza chuka", "baki chuka"
+        ]):
             return "mark_paid"
 
-    else:  # consumer
-        if any(k in text for k in ["register", "registration", "naam", "address", "pata", "naya grahak"]):
-            return "register_user"
-        if any(k in text for k in ["chahiye", "kharidna", "lena hai", "dhoond", "search", "sasta", "cheap"]):
-            return "search_product"
-        if any(k in text for k in ["order", "book", "mangwana", "bhej do"]):
-            return "place_order"
-        if any(k in text for k in ["udhar", "baki", "karza"]):
+        # View orders - order viewing terms
+        if any(k in text for k in [
+            "order", "orders", "booking", "order dekh", "order dekho",
+            "orders dekho", "booking dekho", "konsa order", "order list"
+        ]):
+            return "view_orders"
+
+        # View udhar - general udhar viewing (lower priority)
+        if any(k in text for k in ["udhar", "baki", "karza", "credit"]):
             return "view_udhar"
-        if any(k in text for k in ["pay", "bhugtaan", "chukana", "udhar bharna"]):
+
+    else:  # consumer
+        # Register user - user registration terms
+        if any(k in text for k in [
+            "register", "registration", "naam", "address", "pata",
+            "naya grahak", "sign up", "account banao", "account create"
+        ]):
+            return "register_user"
+
+        # Search product - product search terms
+        if any(k in text for k in [
+            "chahiye", "kharidna", "lena hai", "dhoond", "search",
+            "sasta", "cheap", "mil jayega", "kahan milega",
+            "kahan se lena", "kahan se kharidna", "find karo"
+        ]):
+            return "search_product"
+
+        # Place order - order placement terms
+        if any(k in text for k in [
+            "order", "book", "mangwana", "bhej do", "order karo",
+            "book karo", "kharid karo", "lene ka order", "order dena"
+        ]):
+            return "place_order"
+
+        # Pay udhar - payment terms
+        if any(k in text for k in [
+            "pay", "bhugtaan", "chukana", "udhar bharna", "karza bharna",
+            "baki bharna", "payment karo", "pay karo", "bhugtaan karo"
+        ]):
             return "pay_udhar"
+
+        # View udhar - general udhar viewing (lower priority)
+        if any(k in text for k in ["udhar", "baki", "karza", "credit"]):
+            return "view_udhar"
 
     return "unknown"
 
@@ -217,6 +272,8 @@ def _parse_option_choice(text: str) -> Optional[int]:
 
 
 def _vendor_register_shop(user_id: int, voice_text: str, state: Dict[str, Any]) -> Dict[str, Any]:
+    from .session_agent import update_user_profile
+
     stage = state.get("stage")
 
     # Step 1: ask for shop name
@@ -246,21 +303,20 @@ def _vendor_register_shop(user_id: int, voice_text: str, state: Dict[str, Any]) 
                     "stage": "awaiting_shop_name",
                 },
             }
-        vendors = load_json("vendors.json")
-        new_id = _next_id(vendors)
-        vendors.append({"id": new_id, "name": shop_name, "lat": 0, "lng": 0})
-        save_json("vendors.json", vendors)
+
+        # Update user profile with shop name
+        update_user_profile(user_id, {"shop_name": shop_name})
 
         next_state = {
             "role": "vendor",
             "stage": "awaiting_shop_items",
             "current_intent": "register_shop",
-            "context": {"vendor_id": new_id, "shop_name": shop_name},
+            "context": {"vendor_id": user_id, "shop_name": shop_name},
         }
         return {
             "reply_text": f"Dhanyavaad. Aapki dukaan {shop_name} register ho gayi hai. Aap kya bechte hain? Jaise tamatar, aloo, pyaaz.",
             "action": "register_shop_ask_items",
-            "data": {"vendor_id": new_id},
+            "data": {"vendor_id": user_id},
             "next_state": next_state,
         }
 
@@ -269,13 +325,9 @@ def _vendor_register_shop(user_id: int, voice_text: str, state: Dict[str, Any]) 
         items_text = voice_text.strip()
         ctx = state.get("context", {})
         vendor_id = ctx.get("vendor_id", user_id)
-        vendors = load_json("vendors.json")
-        for v in vendors:
-            if v.get("id") == vendor_id:
-                # store raw items text – lightweight
-                v["items"] = items_text
-                break
-        save_json("vendors.json", vendors)
+
+        # Update user profile with items (store as initial products list)
+        update_user_profile(user_id, {"products": [items_text]})
 
         shop_name = ctx.get("shop_name", "aapki dukaan")
         next_state = {
@@ -640,6 +692,8 @@ def _vendor_mark_paid(user_id: int, voice_text: str, state: Dict[str, Any]) -> D
 
 
 def _consumer_register(user_id: int, voice_text: str, state: Dict[str, Any]) -> Dict[str, Any]:
+    from .session_agent import update_user_profile
+
     stage = state.get("stage")
 
     if stage is None or stage == "consumer_home":
@@ -664,6 +718,10 @@ def _consumer_register(user_id: int, voice_text: str, state: Dict[str, Any]) -> 
                 "data": {},
                 "next_state": {"role": "consumer", "stage": "awaiting_consumer_name"},
             }
+
+        # Update user profile with name
+        update_user_profile(user_id, {"name": name})
+
         next_state = {
             "role": "consumer",
             "stage": "awaiting_consumer_address",
@@ -682,22 +740,19 @@ def _consumer_register(user_id: int, voice_text: str, state: Dict[str, Any]) -> 
         ctx = state.get("context", {})
         name = ctx.get("pending_name", "Grahak")
 
-        consumers = load_json("consumers.json")
-        new_id = _next_id(consumers)
-        consumer_entry = {"id": new_id, "name": name, "lat": 0, "lng": 0, "address": address}
-        consumers.append(consumer_entry)
-        save_json("consumers.json", consumers)
+        # Update user profile with address
+        update_user_profile(user_id, {"address": address})
 
         next_state = {
             "role": "consumer",
             "stage": "consumer_home",
             "current_intent": None,
-            "context": {"consumer_id": new_id, "name": name, "address": address},
+            "context": {"consumer_id": user_id, "name": name, "address": address},
         }
         return {
             "reply_text": f"Dhanyavaad {name}, aapka registration ho gaya. Ab aap kya kharidna chahte hain?",
             "action": "register_user_done",
-            "data": {"consumer_id": new_id},
+            "data": {"consumer_id": user_id},
             "next_state": next_state,
         }
 
@@ -871,7 +926,7 @@ def _consumer_place_order(user_id: int, voice_text: str, state: Dict[str, Any]) 
     }
 
 
-def _consumer_view_udhar(user_id: int, state: Dict[str, Any]) -> Dict[str, Any]:
+def _consumer_view_udhar(user_id: int, voice_text: str, state: Dict[str, Any]) -> Dict[str, Any]:
     ctx = state.get("context", {})
     name = (ctx.get("name") or "").lower()
     stage = state.get("stage")
@@ -889,9 +944,7 @@ def _consumer_view_udhar(user_id: int, state: Dict[str, Any]) -> Dict[str, Any]:
     # If we are already in the confirmation step, handle yes/no
     if stage == "awaiting_pending_udhar_confirm" and ctx.get("pending_udhar"):
         pending = ctx["pending_udhar"]
-        answer = _parse_yes_no(state.get("_last_input", ""))  # voice_text is not passed here; will be set in handle
-        # This helper relies on handle_conversation to stuff the latest
-        # utterance into state["_last_input"] just before calling us.
+        answer = _parse_yes_no(voice_text)
         if answer is None:
             return {
                 "reply_text": "Kripya sirf haan ya nahin boliye. Kya aap udhar confirm karte hain?",
@@ -974,7 +1027,7 @@ def _consumer_view_udhar(user_id: int, state: Dict[str, Any]) -> Dict[str, Any]:
         if not open_txns:
             reply = "Aapka saara udhar clear dikh raha hai. Dhanyavaad."
         else:
-            total_due = sum(t.get("amount", 0) for t in open_txns)
+            total_due = sum(t.get("amount_due", t.get("amount", 0)) for t in open_txns)
             reply = f"Aapko kul lagbhag {int(total_due)} rupaye udhar chukane hain."
 
     next_state = {
@@ -1109,7 +1162,7 @@ def handle_conversation(user_id: int, role: str, voice_text: str, state: Optiona
         if current_intent == "place_order" or stage == "awaiting_order_quantity":
             return _consumer_place_order(user_id, voice_text, state)
         if current_intent == "view_udhar" and stage == "awaiting_pending_udhar_confirm":
-            return _consumer_view_udhar(user_id, state)
+            return _consumer_view_udhar(user_id, voice_text, state)
         if current_intent == "pay_udhar" or stage == "awaiting_udhar_txn_id_consumer":
             return _consumer_pay_udhar(user_id, voice_text, state)
 
@@ -1122,7 +1175,7 @@ def handle_conversation(user_id: int, role: str, voice_text: str, state: Optiona
         if intent == "place_order":
             return _consumer_place_order(user_id, voice_text, state)
         if intent == "view_udhar":
-            return _consumer_view_udhar(user_id, state)
+            return _consumer_view_udhar(user_id, voice_text, state)
         if intent == "pay_udhar":
             return _consumer_pay_udhar(user_id, voice_text, state)
 

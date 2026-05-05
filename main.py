@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
+import logging
+import os
 import uvicorn
 import json
 
@@ -14,18 +16,25 @@ from agents.speech_utils import (
     transcribe_audio_to_text,
     synthesize_text_to_speech_hi,
     encode_audio_base64,
+    has_stt_backend,
+    has_tts_backend,
 )
 
-from agents.listing_agent import extract_product
-from agents.discovery_agent import search_products
-from agents.udhar_agent import create_udhar, pay_udhar, get_audit_log
-from agents.fallback_agent import parse_sms, get_ussd_tree
-from agents.utils import load_json, save_json
-from agents.conversation_agent import handle_conversation
+from agents.session_agent import (
+    register_user,
+    login_user,
+    validate_session,
+    logout_user,
+    update_user_profile,
+    cleanup_expired_sessions,
+)
 
 # ──────────────────────────────────────────────
 # App setup
 # ──────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("krishi_saarthi")
+
 app = FastAPI(
     title="Krishi Saarthi API",
     description="Voice-first multi-agent AI system for rural agricultural commerce",
@@ -73,8 +82,7 @@ class SMSRequest(BaseModel):
 
 
 class VoiceRequest(BaseModel):
-    user_id: int
-    role: str  # "vendor" or "consumer"
+    session_token: str  # Changed from user_id to session_token
     voice_text: str
     language: Optional[str] = "hi"
     state: Optional[Dict[str, Any]] = None
@@ -95,6 +103,24 @@ class VoiceAudioResponse(BaseModel):
     audio_base64: Optional[str] = None
 
 
+class RegisterRequest(BaseModel):
+    phone: str
+    name: str
+    role: str  # "vendor" or "consumer"
+    password: str
+    address: Optional[str] = None
+
+
+class LoginRequest(BaseModel):
+    phone: str
+    password: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    session_token: str
+    updates: Dict[str, Any]
+
+
 # ──────────────────────────────────────────────
 # Routes
 # ──────────────────────────────────────────────
@@ -106,7 +132,13 @@ def root():
 
 @app.get("/api/health")
 def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "stt_available": has_stt_backend(),
+        "tts_available": has_tts_backend(),
+        "ollama_host": os.getenv("OLLAMA_HOST", "http://localhost:11434"),
+        "ollama_model": os.getenv("OLLAMA_MODEL", "phi3:latest"),
+    }
 
 
 @app.post("/api/voice")
@@ -117,9 +149,22 @@ def voice_endpoint(req: VoiceRequest):
     multi-step state, and always returns Hindi reply_text suitable
     for text-to-speech.
     """
+    # Validate session
+    session_data = validate_session(req.session_token)
+    if not session_data:
+        return {
+            "reply_text": "Session expired. Please login again.",
+            "action": "session_expired",
+            "data": {},
+            "next_state": {},
+        }
+
+    user_id = session_data["user_id"]
+    role = session_data["role"]
+
     result = handle_conversation(
-        user_id=req.user_id,
-        role=req.role,
+        user_id=user_id,
+        role=role,
         voice_text=req.voice_text,
         state=req.state or {},
     )
@@ -134,18 +179,32 @@ def voice_endpoint(req: VoiceRequest):
 
 @app.post("/api/voice-audio", response_model=VoiceAudioResponse)
 async def voice_audio_endpoint(
-    user_id: int = Form(...),
-    role: str = Form(...),  # "vendor" or "consumer"
+    session_token: str = Form(...),
     state: str = Form("{}"),  # JSON-encoded state from previous turn
     language: str = Form("hi"),
     audio_file: UploadFile = File(...),
 ):
     """Voice + text endpoint.
 
-    - Client sends recorded audio plus user_id, role, and previous state.
+    - Client sends recorded audio plus session_token, and previous state.
     - Server converts audio to Hindi text, runs the conversation agent,
       and returns both reply_text and (optionally) TTS audio.
     """
+    # Validate session
+    session_data = validate_session(session_token)
+    if not session_data:
+        return VoiceAudioResponse(
+            reply_text="Session expired. Please login again.",
+            user_text=None,
+            action="session_expired",
+            data={},
+            next_state={},
+            audio_base64=None,
+        )
+
+    user_id = session_data["user_id"]
+    role = session_data["role"]
+
     # Read audio bytes
     audio_bytes = await audio_file.read()
 
@@ -309,6 +368,79 @@ def ussd_endpoint():
     Fallback Agent: Return static USSD menu tree.
     """
     return get_ussd_tree()
+
+
+# ──────────────────────────────────────────────
+# Authentication Routes
+# ──────────────────────────────────────────────
+
+@app.post("/api/auth/register")
+def register_endpoint(req: RegisterRequest):
+    """Register a new user (vendor or consumer)."""
+    result = register_user(
+        phone=req.phone,
+        name=req.name,
+        role=req.role,
+        password=req.password,
+        address=req.address,
+    )
+
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    return result
+
+
+@app.post("/api/auth/login")
+def login_endpoint(req: LoginRequest):
+    """Authenticate user and return session token."""
+    result = login_user(req.phone, req.password)
+
+    if "error" in result:
+        raise HTTPException(status_code=401, detail=result["error"])
+
+    return result
+
+
+@app.post("/api/auth/logout")
+def logout_endpoint(session_token: str):
+    """Invalidate user session (logout)."""
+    success = logout_user(session_token)
+    if not success:
+        raise HTTPException(status_code=400, detail="Invalid session token.")
+
+    return {"message": "Logout successful."}
+
+
+@app.post("/api/auth/profile")
+def profile_update_endpoint(req: ProfileUpdateRequest):
+    """Update user profile information."""
+    session_data = validate_session(req.session_token)
+    if not session_data:
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+
+    success = update_user_profile(session_data["user_id"], req.updates)
+    if not success:
+        raise HTTPException(status_code=400, detail="Profile update failed.")
+
+    return {"message": "Profile updated successfully."}
+
+
+@app.get("/api/auth/validate")
+def validate_session_endpoint(session_token: str):
+    """Validate session token and return user info."""
+    session_data = validate_session(session_token)
+    if not session_data:
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+
+    return session_data
+
+
+@app.post("/api/auth/cleanup")
+def cleanup_sessions_endpoint():
+    """Clean up expired sessions (admin/maintenance endpoint)."""
+    cleaned_count = cleanup_expired_sessions()
+    return {"message": f"Cleaned up {cleaned_count} expired sessions."}
 
 
 if __name__ == "__main__":

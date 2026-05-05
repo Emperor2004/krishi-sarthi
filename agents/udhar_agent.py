@@ -33,6 +33,8 @@ def create_udhar(vendor_id: int, consumer_name: str, amount: float, meta: dict |
         "vendor_name": vendor_name,
         "consumer_name": consumer_name,
         "amount": amount,
+        "original_amount": amount,
+        "amount_due": amount,
         "status": "pending",
         "timestamp": now,
         "audit_log": [
@@ -70,16 +72,18 @@ def pay_udhar(transaction_id: str, amount_paid: float = None) -> dict:
                 return {"success": False, "message": f"Transaction {transaction_id} ka pura bhugtaan pehle hi ho chuka hai."}
 
             now = _timestamp()
-            pay_amount = amount_paid if amount_paid else txn['amount']
+            amount_due = txn.get('amount_due', txn.get('amount', 0))
+            pay_amount = amount_paid if amount_paid is not None else amount_due
 
             # Determine if partial or full
-            if pay_amount >= txn['amount']:
+            if pay_amount >= amount_due:
                 txn['status'] = 'paid'
+                txn['amount_due'] = 0.0
                 detail = f"₹{pay_amount} ka pura bhugtaan mil gaya hai. Status 'paid' ho gaya hai."
             else:
                 txn['status'] = 'partial'
-                txn['amount'] = txn['amount'] - pay_amount
-                detail = f"₹{pay_amount} ka hissaana bhugtaan mil gaya hai. Ab baki ₹{txn['amount']} reh gaya hai."
+                txn['amount_due'] = round(amount_due - pay_amount, 2)
+                detail = f"₹{pay_amount} ka hissaana bhugtaan mil gaya hai. Ab baki ₹{txn['amount_due']} reh gaya hai."
 
             txn['audit_log'].append({
                 "action": "PAY",

@@ -7,10 +7,24 @@ rely on hardcoded constants.
 import math
 import json
 import os
+import tempfile
+import threading
 from functools import lru_cache
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 CONFIG_DIR = os.path.join(os.path.dirname(__file__), '..', 'config')
+
+_FILE_LOCKS: dict[str, threading.Lock] = {}
+_LOCKS_LOCK = threading.Lock()
+
+
+def _get_file_lock(path: str) -> threading.Lock:
+    with _LOCKS_LOCK:
+        lock = _FILE_LOCKS.get(path)
+        if lock is None:
+            lock = threading.Lock()
+            _FILE_LOCKS[path] = lock
+        return lock
 
 
 def load_json(filename: str) -> list:
@@ -18,18 +32,30 @@ def load_json(filename: str) -> list:
 
     Returns an empty list when the file does not exist.
     """
+    os.makedirs(DATA_DIR, exist_ok=True)
     path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(path):
         return []
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+
+    lock = _get_file_lock(path)
+    with lock:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
 
 def save_json(filename: str, data) -> None:
     """Save data to a JSON file in the data directory."""
+    os.makedirs(DATA_DIR, exist_ok=True)
     path = os.path.join(DATA_DIR, filename)
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    dirpath = os.path.dirname(path)
+    lock = _get_file_lock(path)
+    with lock:
+        with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=dirpath, delete=False) as tmp:
+            json.dump(data, tmp, indent=2, ensure_ascii=False)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+            temp_path = tmp.name
+        os.replace(temp_path, path)
 
 
 @lru_cache(maxsize=1)
@@ -81,17 +107,11 @@ def normalize_freshness(freshness: int) -> str:
 
 def get_vendor_by_id(vendor_id: int) -> dict:
     """Fetch a vendor record by ID."""
-    vendors = load_json('vendors.json')
-    for v in vendors:
-        if v['id'] == vendor_id:
-            return v
-    return {}
+    from .session_agent import get_vendor_by_id as get_vendor
+    return get_vendor(vendor_id)
 
 
 def get_consumer_by_id(consumer_id: int) -> dict:
     """Fetch a consumer record by ID."""
-    consumers = load_json('consumers.json')
-    for c in consumers:
-        if c['id'] == consumer_id:
-            return c
-    return {}
+    from .session_agent import get_consumer_by_id as get_consumer
+    return get_consumer(consumer_id)

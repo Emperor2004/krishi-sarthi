@@ -18,8 +18,67 @@
 		</header>
 
 		<main class="app-main">
+			<!-- Step 0: Authentication screens -->
+			<section id="auth-screen" class="auth-screen">
+				<div class="auth-container">
+					<!-- Login Form -->
+					<div id="login-form" class="auth-form">
+						<h2>लॉगिन करें</h2>
+						<form id="login-form-element">
+							<div class="form-group">
+								<label for="login-phone">फोन नंबर</label>
+								<input type="tel" id="login-phone" required placeholder="9876543210">
+							</div>
+							<div class="form-group">
+								<label for="login-password">पासवर्ड</label>
+								<input type="password" id="login-password" required>
+							</div>
+							<button type="submit" class="primary-btn">लॉगिन करें</button>
+						</form>
+						<p class="auth-switch">
+							नया खाता? <a href="#" id="show-register">रजिस्टर करें</a>
+						</p>
+					</div>
+
+					<!-- Register Form -->
+					<div id="register-form" class="auth-form hidden">
+						<h2>नया खाता बनाएं</h2>
+						<form id="register-form-element">
+							<div class="form-group">
+								<label for="register-phone">फोन नंबर</label>
+								<input type="tel" id="register-phone" required placeholder="9876543210">
+							</div>
+							<div class="form-group">
+								<label for="register-name">नाम</label>
+								<input type="text" id="register-name" required placeholder="आपका पूरा नाम">
+							</div>
+							<div class="form-group">
+								<label for="register-role">आप कौन हैं?</label>
+								<select id="register-role" required>
+									<option value="">चुनें</option>
+									<option value="vendor">विक्रेता (दुकानदार)</option>
+									<option value="consumer">ग्राहक (खरीदार)</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label for="register-password">पासवर्ड</label>
+								<input type="password" id="register-password" required minlength="6">
+							</div>
+							<div class="form-group">
+								<label for="register-address">पता (वैकल्पिक)</label>
+								<input type="text" id="register-address" placeholder="गाँव/शहर का नाम">
+							</div>
+							<button type="submit" class="primary-btn">खाता बनाएं</button>
+						</form>
+						<p class="auth-switch">
+							पहले से खाता है? <a href="#" id="show-login">लॉगिन करें</a>
+						</p>
+					</div>
+				</div>
+			</section>
+
 			<!-- Step 1: Landing choice (like image 1) -->
-			<section id="landing-screen" class="landing-screen">
+			<section id="landing-screen" class="landing-screen hidden">
 				<div class="landing-hero">
 					<h2>आसान आवाज़ आधारित कृषि साथी</h2>
 					<p>सबसे पहले चुनिए – आप विक्रेता हैं या ग्राहक?</p>

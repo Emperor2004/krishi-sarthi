@@ -10,8 +10,11 @@ You can swap implementations depending on your deployment.
 from __future__ import annotations
 
 import base64
+import logging
 from io import BytesIO
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # STT: Whisper (local, offline). Install with:
 #   pip install git+https://github.com/openai/whisper.git
@@ -21,6 +24,7 @@ try:  # pragma: no cover - optional dependency
 except Exception:  # pragma: no cover - optional dependency missing
     whisper = None  # type: ignore
     _whisper_model = None
+    logger.warning("Whisper is not installed; speech-to-text will be unavailable.")
 
 # TTS: gTTS (simple Hindi TTS, needs internet). Install with:
 #   pip install gTTS
@@ -28,6 +32,7 @@ try:  # pragma: no cover - optional dependency
     from gtts import gTTS  # type: ignore
 except Exception:  # pragma: no cover - optional dependency missing
     gTTS = None  # type: ignore
+    logger.warning("gTTS is not installed; text-to-speech audio will be unavailable.")
 
 
 def transcribe_audio_to_text(audio_bytes: bytes, language: str = "hi") -> str:
@@ -46,7 +51,7 @@ def transcribe_audio_to_text(audio_bytes: bytes, language: str = "hi") -> str:
         Transcribed text. If no STT engine is available, returns empty string.
     """
     if whisper is None:
-        # No STT backend installed – caller should handle empty string
+        logger.warning("Whisper STT backend not installed. Returning empty transcription.")
         return ""
 
     global _whisper_model
@@ -71,6 +76,7 @@ def synthesize_text_to_speech_hi(text: str) -> bytes:
     if not text:
         return b""
     if gTTS is None:
+        logger.warning("gTTS backend not installed. Returning empty audio bytes.")
         return b""
 
     buf = BytesIO()
@@ -85,3 +91,13 @@ def encode_audio_base64(audio_bytes: bytes) -> str:
     if not audio_bytes:
         return ""
     return base64.b64encode(audio_bytes).decode("ascii")
+
+
+def has_stt_backend() -> bool:
+    """Return True when Whisper-based STT is installed and available."""
+    return whisper is not None
+
+
+def has_tts_backend() -> bool:
+    """Return True when gTTS-based TTS is installed and available."""
+    return gTTS is not None
