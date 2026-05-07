@@ -39,8 +39,13 @@ def load_json(filename: str) -> list:
 
     lock = _get_file_lock(path)
     with lock:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data if isinstance(data, list) else []
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"Error loading {filename}: {e}")
+            return []
 
 
 def save_json(filename: str, data) -> None:
@@ -50,12 +55,25 @@ def save_json(filename: str, data) -> None:
     dirpath = os.path.dirname(path)
     lock = _get_file_lock(path)
     with lock:
-        with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=dirpath, delete=False) as tmp:
-            json.dump(data, tmp, indent=2, ensure_ascii=False)
-            tmp.flush()
-            os.fsync(tmp.fileno())
-            temp_path = tmp.name
-        os.replace(temp_path, path)
+        try:
+            with tempfile.NamedTemporaryFile('w', encoding='utf-8', dir=dirpath, delete=False) as tmp:
+                json.dump(data, tmp, indent=2, ensure_ascii=False)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+                temp_path = tmp.name
+            os.replace(temp_path, path)
+        except (IOError, OSError) as e:
+            print(f"Error saving {filename}: {e}")
+            # Attempt to create backup if original exists
+            if os.path.exists(path):
+                backup_path = f"{path}.backup"
+                try:
+                    import shutil
+                    shutil.copy2(path, backup_path)
+                    print(f"Created backup: {backup_path}")
+                except Exception:
+                    pass
+            raise
 
 
 @lru_cache(maxsize=1)

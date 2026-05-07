@@ -10,7 +10,7 @@ import time
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta
 
-from .utils import load_json, save_json
+from ..utils.utils import load_json, save_json
 
 
 SESSION_TIMEOUT_HOURS = 24
@@ -149,25 +149,32 @@ def validate_session(session_token: str) -> Optional[Dict[str, Any]]:
     Returns user data dict if session is valid, None otherwise.
     """
     sessions = load_json(SESSIONS_FILE)
+    valid_session = None
+    user_id = None
 
     for session in sessions:
         if session.get("token") == session_token and _is_session_valid(session):
+            valid_session = session
+            user_id = session["user_id"]
             # Update last activity
             session["last_activity"] = time.time()
-            save_json(SESSIONS_FILE, sessions)
+            break
 
-            # Get user data
-            user_id = session["user_id"]
-            users = load_json(USERS_FILE)
-            for user in users:
-                if user.get("id") == user_id and user.get("is_active", True):
-                    return {
-                        "user_id": user_id,
-                        "role": session["role"],
-                        "name": user.get("name", ""),
-                        "phone": user.get("phone", ""),
-                        "session_token": session_token,
-                    }
+    if valid_session:
+        # Save updated sessions
+        save_json(SESSIONS_FILE, sessions)
+        
+        # Get user data
+        users = load_json(USERS_FILE)
+        for user in users:
+            if user.get("id") == user_id and user.get("is_active", True):
+                return {
+                    "user_id": user_id,
+                    "role": valid_session["role"],
+                    "name": user.get("name", ""),
+                    "phone": user.get("phone", ""),
+                    "session_token": session_token,
+                }
 
     return None
 

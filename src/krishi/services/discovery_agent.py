@@ -11,7 +11,7 @@ import requests
 import time
 from difflib import get_close_matches
 from dotenv import load_dotenv
-from .utils import (
+from ..utils.utils import (
     load_json,
     load_domain_config,
     get_consumer_by_id,
@@ -213,7 +213,7 @@ def search_products(query_text: str, consumer_id: int) -> dict:
         results.sort(key=lambda x: x['distance_km'])
     else:
         # Default: score = freshness * 0.4 - distance * 0.3 - price * 0.001
-        results.sort(key=lambda x: (-(x['freshness'] * 0.4 - x['distance_km'] * 0.3)))
+        results.sort(key=lambda x: (-(x['freshness'] * 0.4 - x['distance_km'] * 0.3 - x['price'] * 0.001)))
 
     return {
         "query": query_text,

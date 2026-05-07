@@ -1,3 +1,29 @@
+Metadata-Version: 2.4
+Name: krishi-sarthi
+Version: 1.0.0
+Summary: Voice-first AI system for rural agricultural commerce
+Author: Krishi Saarthi Team
+License: MIT
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi==0.111.0
+Requires-Dist: uvicorn==0.30.1
+Requires-Dist: python-dotenv==1.0.1
+Requires-Dist: python-multipart==0.0.7
+Requires-Dist: requests==2.32.3
+Requires-Dist: pydantic>=2.0.0
+Provides-Extra: audio
+Requires-Dist: gtts>=2.4.0; extra == "audio"
+Requires-Dist: openai-whisper>=20231117; extra == "audio"
+Requires-Dist: imageio-ffmpeg>=0.5.0; extra == "audio"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Provides-Extra: all
+Requires-Dist: krishi-sarthi[audio,dev]; extra == "all"
+
 # 🌾 Krishi Saarthi — कृषि सारथी
 
 **Voice-First Multi-Agent AI System for Rural Agricultural Commerce**

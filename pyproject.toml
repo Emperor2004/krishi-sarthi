@@ -25,6 +25,7 @@ license = {text = "MIT"}
 audio = [
     "gtts>=2.4.0",
     "openai-whisper>=20231117",
+    "imageio-ffmpeg>=0.5.0",
 ]
 dev = [
     "pytest>=7.0.0",

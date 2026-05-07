@@ -13,7 +13,7 @@ import time
 from difflib import get_close_matches
 from dotenv import load_dotenv
 
-from .utils import load_json, load_domain_config
+from ..utils.utils import load_json, load_domain_config
 
 # Load environment variables from the project root .env when available
 load_dotenv()

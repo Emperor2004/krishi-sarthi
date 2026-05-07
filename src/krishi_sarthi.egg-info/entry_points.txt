@@ -1,0 +1,3 @@
+[console_scripts]
+krishi-dev = scripts.dev:main
+krishi-setup = scripts.setup:main

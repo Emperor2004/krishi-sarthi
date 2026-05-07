@@ -2,6 +2,7 @@
 import pytest
 import sys
 import os
+import random
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -20,13 +21,14 @@ def test_session_management():
     """Test basic session management functionality."""
     from krishi.services.session_agent import register_user, login_user, validate_session
 
-    # Test user registration
-    result = register_user("9876543210", "Test User", "vendor", "password123")
+    # Test user registration with a unique phone number to avoid shared test state.
+    phone = f"9{random.randint(10**8, 10**9 - 1)}"
+    result = register_user(phone, "Test User", "vendor", "password123")
     assert "user_id" in result
     assert result["role"] == "vendor"
 
     # Test login
-    login_result = login_user("9876543210", "password123")
+    login_result = login_user(phone, "password123")
     assert "session_token" in login_result
 
     # Test session validation

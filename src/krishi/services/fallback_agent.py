@@ -8,7 +8,7 @@ to hardcoded keywords.
 import os
 from difflib import get_close_matches
 
-from .utils import load_json, load_domain_config, get_vendor_by_id, normalize_freshness
+from ..utils.utils import load_json, load_domain_config, get_vendor_by_id, normalize_freshness
 from .udhar_agent import create_udhar, pay_udhar
 
 

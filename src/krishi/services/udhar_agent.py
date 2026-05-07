@@ -3,7 +3,7 @@ Udhar Agent – Manages informal credit (create, pay, audit trail).
 Every operation is immutably logged in udhar_ledger.json.
 """
 from datetime import datetime
-from .utils import load_json, save_json, get_vendor_by_id
+from ..utils.utils import load_json, save_json, get_vendor_by_id
 import uuid
 
 
@@ -20,8 +20,17 @@ def create_udhar(vendor_id: int, consumer_name: str, amount: float, meta: dict |
     the core ledger structure stable while allowing richer
     context.
     """
+    if amount <= 0:
+        return {"success": False, "message": "Amount must be greater than 0"}
+    
+    if not consumer_name or not consumer_name.strip():
+        return {"success": False, "message": "Consumer name is required"}
+    
     ledger = load_json('udhar_ledger.json')
     vendor = get_vendor_by_id(vendor_id)
+    if not vendor or not vendor.get('id'):
+        return {"success": False, "message": f"Vendor ID {vendor_id} not found"}
+    
     vendor_name = vendor.get('name', f'Vendor {vendor_id}')
 
     txn_id = "U" + str(uuid.uuid4())[:6].upper()
