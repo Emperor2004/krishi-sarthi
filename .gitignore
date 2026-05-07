@@ -17,6 +17,12 @@ frontend/dist/
 # Runtime data files
 data/
 
+# Demo environment (keep demo data out of main repo)
+demo/data/
+demo/logs/
+demo/*.db
+demo/demo.db
+
 # OS / editor files
 .DS_Store
 Thumbs.db
@@ -25,3 +31,35 @@ Thumbs.db
 .idea/
 .vscode/
 .code/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs
+logs/
+*.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment specific
+.env.local
+.env.development
+.env.staging
+.env.production
+
+# Docker
+.dockerignore
+
+# OS generated files
+Thumbs.db

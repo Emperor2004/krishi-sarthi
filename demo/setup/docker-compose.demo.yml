@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  krishi-sarthi-demo:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=demo
+      - DATABASE_URL=sqlite:///./demo.db
+      - JWT_SECRET_KEY=demo-jwt-secret-key-for-demonstration-only
+      - OLLAMA_HOST=http://ollama:11434
+      - LOG_LEVEL=INFO
+      - DEBUG=true
+      - METRICS_ENABLED=true
+      - HEALTH_CHECK_ENABLED=true
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./demo.db:/app/demo.db
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  demo-dashboard:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ../monitoring:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    depends_on:
+      - krishi-sarthi-demo
+
+volumes:
+  ollama_data:
+  redis_data:
