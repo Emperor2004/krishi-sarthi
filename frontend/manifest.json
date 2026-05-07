@@ -1,0 +1,43 @@
+{
+  "name": "Krishi Saarthi",
+  "short_name": "Krishi Saarthi",
+  "description": "Voice-first rural commerce companion for farmers & consumers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1b7b3c",
+  "theme_color": "#1b7b3c",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "hi",
+  "categories": ["business", "agriculture", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png", 
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Vendor Mode",
+      "short_name": "Vendor",
+      "description": "Start as vendor",
+      "url": "/?role=vendor",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Consumer Mode", 
+      "short_name": "Consumer",
+      "description": "Start as consumer",
+      "url": "/?role=consumer",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96" }]
+    }
+  ]
+}

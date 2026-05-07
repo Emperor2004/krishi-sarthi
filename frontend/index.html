@@ -3,11 +3,32 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="description" content="Voice-first rural commerce companion for farmers & consumers" />
+	<meta name="keywords" content="agriculture, rural, voice, commerce, farmers, India" />
+	<meta name="author" content="Krishi Saarthi Team" />
 	<title>Krishi Saarthi</title>
+	
+	<!-- Accessibility and performance meta tags -->
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="theme-color" content="#1b7b3c" />
+	<meta name="color-scheme" content="light dark" />
+	
+	<!-- Preload critical resources -->
+	<link rel="preload" href="/src/assets/style.css" as="style" />
+	<link rel="preload" href="/src/assets/accessible.css" as="style" />
+	
+	<!-- PWA support -->
+	<link rel="manifest" href="/manifest.json" />
+	<link rel="apple-touch-icon" href="/icon-192.png" />
+	<link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+	<link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
 </head>
 <body>
+	<!-- Skip to main content for screen readers -->
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+	
 	<div class="app-shell">
-		<header class="app-header">
+		<header class="app-header" role="banner">
 			<div class="brand-mark">
 				<span class="brand-icon">🌾</span>
 				<div class="brand-text">
@@ -17,9 +38,9 @@
 			</div>
 		</header>
 
-		<main class="app-main">
+		<main id="main-content" class="app-main">
 			<!-- Step 0: Authentication screens -->
-			<section id="auth-screen" class="auth-screen">
+			<section id="auth-screen" class="auth-screen" aria-labelledby="auth-heading">
 				<div class="auth-container">
 					<!-- Login Form -->
 					<div id="login-form" class="auth-form">
